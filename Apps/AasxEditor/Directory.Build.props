@@ -1,0 +1,10 @@
+<Project>
+  <!-- AasxEditor(Core·Web·Desktop) 버전의 SSOT = Apps/AasxEditor/BuildVersion.txt. csproj 에 <Version> 을 두지 않는다 —
+       매 빌드 시 이 props 가 값을 읽어 Version / AssemblyVersion / FileVersion 에 주입한다. -->
+  <PropertyGroup>
+    <AasxEditorVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)BuildVersion.txt').Trim())</AasxEditorVersion>
+    <Version>$(AasxEditorVersion)</Version>
+    <AssemblyVersion>$(AasxEditorVersion)</AssemblyVersion>
+    <FileVersion>$(AasxEditorVersion)</FileVersion>
+  </PropertyGroup>
+</Project>
