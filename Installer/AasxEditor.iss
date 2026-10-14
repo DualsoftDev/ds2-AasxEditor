@@ -1,7 +1,7 @@
 ; AasxEditor.Desktop Inno Setup Script
 ; Self-contained offline installer for AASX JSON Editor (WPF + BlazorWebView).
 ;
-; Build prerequisites (run from Apps/AasxEditor):
+; Build prerequisites (run from repo root):
 ;   1) pwsh -ExecutionPolicy Bypass -File scripts\fetch-monaco.ps1
 ;      → populates AasxEditor.Core\wwwroot\lib\monaco-editor (~13MB)
 ;   2) dotnet publish AasxEditor.Desktop\AasxEditor.Desktop.csproj ^

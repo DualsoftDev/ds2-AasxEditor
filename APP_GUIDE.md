@@ -28,35 +28,34 @@ AASX(Asset Administration Shell) 파일을 웹 브라우저에서 열고, 탐색
 코어(RCL)와 두 개의 호스트(Web / Desktop)로 분리된 구성입니다. 코어에 실질 코드의 대부분이 있고, 호스트는 각각 얇은 래퍼입니다.
 
 ```
-Apps/AasxEditor/
-  AasxEditor.Core/          ← [RCL] 공유 코어 (90%+ 코드)
-    Components/
-      Pages/
-        Home.razor          - 마크업 (툴바, 검색, 3패널 레이아웃, 모달)
-        Home.razor.cs       - 상태 필드, DI, 공용 헬퍼, 라이프사이클
-        Home.FileIO.cs      - 파일 열기/추가/저장/복원/툴바 액션
-        Home.Explorer.cs    - 트리/익스플로러/검색/속성 편집
-        Home.BatchEdit.cs   - 일괄 편집 (Environment 직접 수정)
-        Home.DragDrop.cs    - 드래그앤드롭 (InputFile 주입 방식)
-      Layout/
-        MainLayout.razor    - 앱 레이아웃 셸
-      Routes.razor          - 라우터 (AppAssembly = Core)
-      _Imports.razor
-    Models/                 - AasEntity, AasTreeNode
-    Services/               - IAasMetadataStore, SqliteMetadataStore, AasxConverterService,
-                              AasTreeBuilderService, AasEntityExtractor, CircuitTracker, ...
-    wwwroot/                - js/monaco-interop.js, app.css, favicon, lib/bootstrap
-    CoreAssemblyMarker.cs   - Router AppAssembly 해석용 마커
+AasxEditor.Core/          ← [RCL] 공유 코어 (90%+ 코드)
+  Components/
+    Pages/
+      Home.razor          - 마크업 (툴바, 검색, 3패널 레이아웃, 모달)
+      Home.razor.cs       - 상태 필드, DI, 공용 헬퍼, 라이프사이클
+      Home.FileIO.cs      - 파일 열기/추가/저장/복원/툴바 액션
+      Home.Explorer.cs    - 트리/익스플로러/검색/속성 편집
+      Home.BatchEdit.cs   - 일괄 편집 (Environment 직접 수정)
+      Home.DragDrop.cs    - 드래그앤드롭 (InputFile 주입 방식)
+    Layout/
+      MainLayout.razor    - 앱 레이아웃 셸
+    Routes.razor          - 라우터 (AppAssembly = Core)
+    _Imports.razor
+  Models/                 - AasEntity, AasTreeNode
+  Services/               - IAasMetadataStore, SqliteMetadataStore, AasxConverterService,
+                            AasTreeBuilderService, AasEntityExtractor, CircuitTracker, ...
+  wwwroot/                - js/monaco-interop.js, app.css, favicon, lib/bootstrap
+  CoreAssemblyMarker.cs   - Router AppAssembly 해석용 마커
 
-  AasxEditor.Web/           ← Blazor Server 호스트 (IIS 배포 / SaaS)
-    Program.cs              - DI 등록, Interactive Server 렌더 모드
-    Components/App.razor    - 호스트 HTML (blazor.web.js 로드, @rendermode="InteractiveServer")
-    appsettings.json, Properties/launchSettings.json
+AasxEditor.Web/           ← Blazor Server 호스트 (IIS 배포 / SaaS)
+  Program.cs              - DI 등록, Interactive Server 렌더 모드
+  Components/App.razor    - 호스트 HTML (blazor.web.js 로드, @rendermode="InteractiveServer")
+  appsettings.json, Properties/launchSettings.json
 
-  AasxEditor.Desktop/       ← WPF + BlazorWebView 호스트 (데스크톱 배포)
-    App.xaml / .xaml.cs     - WPF 진입점, DI 등록 (DB는 LocalAppData에)
-    MainWindow.xaml / .xaml.cs - BlazorWebView 창
-    wwwroot/index.html      - 호스트 HTML (blazor.webview.js 로드)
+AasxEditor.Desktop/       ← WPF + BlazorWebView 호스트 (데스크톱 배포)
+  App.xaml / .xaml.cs     - WPF 진입점, DI 등록 (DB는 LocalAppData에)
+  MainWindow.xaml / .xaml.cs - BlazorWebView 창
+  wwwroot/index.html      - 호스트 HTML (blazor.webview.js 로드)
 
 samples/                    - 테스트용 AASX 샘플 파일
 ```
@@ -65,14 +64,12 @@ samples/                    - 테스트용 AASX 샘플 파일
 
 ### Web (Blazor Server)
 ```bash
-cd Apps/AasxEditor
 dotnet run --project AasxEditor.Web
 ```
 기본 URL: `http://localhost:5236` (launchSettings.json 참조)
 
 ### Desktop (WPF BlazorWebView, Windows 전용)
 ```bash
-cd Apps/AasxEditor
 dotnet run --project AasxEditor.Desktop
 ```
 SQLite DB는 `%LocalAppData%\AasxEditor\aas_metadata.db`에 생성됩니다.
@@ -90,7 +87,7 @@ dotnet build AasxEditor.sln
 ### 자동 빌드 (권장)
 
 ```cmd
-cd Apps\AasxEditor\Installer
+cd Installer
 build-installer.bat
 ```
 
