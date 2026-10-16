@@ -57,34 +57,34 @@ public partial class Home
         }
     }
 
-    private void ExplorerGoRoot()
+    internal void ExplorerGoRoot()
     {
         if (_explorerPath.Count == 0) return;
         PushNavHistory();
         _explorerPath.Clear();
     }
 
-    private void ExplorerGoTo(int index)
+    internal void ExplorerGoTo(int index)
     {
         PushNavHistory();
         _explorerPath = _explorerPath.Take(index + 1).ToList();
     }
 
-    private void ExplorerGoBack()
+    internal void ExplorerGoBack()
     {
         if (_navBack.Count == 0) return;
         _navForward.Push(new List<AasTreeNode>(_explorerPath));
         _explorerPath = _navBack.Pop();
     }
 
-    private void ExplorerGoForward()
+    internal void ExplorerGoForward()
     {
         if (_navForward.Count == 0) return;
         _navBack.Push(new List<AasTreeNode>(_explorerPath));
         _explorerPath = _navForward.Pop();
     }
 
-    private void ExplorerGoUp()
+    internal void ExplorerGoUp()
     {
         if (_explorerPath.Count == 0) return;
         PushNavHistory();
@@ -116,10 +116,10 @@ public partial class Home
     }
 
     // ===== Properties editing =====
-    private Task OnCardBoolChanged(AasTreeNode node, bool value)
+    internal Task OnCardBoolChanged(AasTreeNode node, bool value)
         => OnCardValueChanged(node, value ? "true" : "false");
 
-    private async Task OnCardValueChanged(AasTreeNode node, string? newValue)
+    internal async Task OnCardValueChanged(AasTreeNode node, string? newValue)
     {
         PushUndo($"'{node.Label}' 값 변경");
         node.Properties["value"] = newValue;
@@ -246,7 +246,7 @@ public partial class Home
     }
 
     // ===== Finder Column View =====
-    private void ColumnSelect(int columnIndex, AasTreeNode node)
+    internal void ColumnSelect(int columnIndex, AasTreeNode node)
     {
         PushNavHistory();
         while (_explorerPath.Count > columnIndex)
@@ -263,7 +263,7 @@ public partial class Home
         }
     }
 
-    private bool IsColumnItemSelected(int columnIndex, AasTreeNode node)
+    internal bool IsColumnItemSelected(int columnIndex, AasTreeNode node)
     {
         if (columnIndex < _explorerPath.Count && _explorerPath[columnIndex] == node)
             return true;
@@ -273,15 +273,15 @@ public partial class Home
     }
 
     // ===== Windows Explorer View =====
-    private void SetExplorerViewMode(string mode)
+    internal void SetExplorerViewMode(string mode)
     {
         if (mode == _explorerViewMode) return;
         _explorerViewMode = mode;
     }
 
-    private void WindowsTileClick(AasTreeNode node) => SelectNode(node);
+    internal void WindowsTileClick(AasTreeNode node) => SelectNode(node);
 
-    private void WindowsTileDblClick(AasTreeNode node)
+    internal void WindowsTileDblClick(AasTreeNode node)
     {
         if (node.Children.Count == 0) return;
         PushNavHistory();

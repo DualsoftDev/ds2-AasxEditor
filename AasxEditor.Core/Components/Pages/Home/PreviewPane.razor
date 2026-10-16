@@ -1,0 +1,334 @@
+@inherits HomeSection
+
+@{
+    var sel = Node;
+    var selCss = Home.IconClass(sel);
+    var isUserTags = sel.NodeType == "SML" && sel.Label == "UserTags";
+}
+
+<div class="finder-preview">
+    <div class="finder-preview-icon-area">
+        <span class="node-icon icon-@selCss" style="width:48px;height:40px;font-size:20px;border-radius:8px">@sel.Icon</span>
+    </div>
+    <div class="finder-preview-name">@sel.Label</div>
+    <div class="finder-preview-type-badge">@sel.NodeType</div>
+
+    @if (PropertyDescriptions.Get(sel.Label) is { } selDesc)
+    {
+        <div class="finder-preview-desc">@selDesc</div>
+    }
+
+    @* Metadata *@
+    @{
+        var previewMetaKeys = new[] { "idShort", "id", "semanticId" };
+        var previewMeta = sel.Properties
+            .Where(p => previewMetaKeys.Contains(p.Key) && p.Value is not null).ToList();
+    }
+    @if (previewMeta.Count > 0)
+    {
+        <div class="finder-preview-meta">
+            @foreach (var kv in previewMeta)
+            {
+                <div class="finder-preview-meta-row">
+                    <span class="finder-preview-meta-key">@kv.Key</span>
+                    <span class="finder-preview-meta-val">@Home.TruncateValue(kv.Value!, 40)</span>
+                </div>
+            }
+        </div>
+    }
+
+    @* Value editor for leaf *@
+    @if (!isUserTags && sel.Children.Count == 0 && sel.Properties.ContainsKey("value"))
+    {
+        var vt = sel.Properties.GetValueOrDefault("valueType") ?? "String";
+        var val = sel.Properties.GetValueOrDefault("value") ?? "";
+        <div class="finder-preview-editor">
+            <div class="finder-preview-editor-label">
+                <span>값</span>
+                <span class="finder-preview-vt">@vt</span>
+            </div>
+            @if (vt == "Boolean")
+            {
+                var boolVal = val.Equals("true", StringComparison.OrdinalIgnoreCase);
+                <label class="toggle-switch">
+                    <input type="checkbox" checked="@boolVal"
+                           @onchange="(e) => Host.OnCardBoolChanged(sel, (bool)e.Value!)" />
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">@(boolVal ? "true" : "false")</span>
+                </label>
+            }
+            else if (vt == "Int")
+            {
+                <input type="number" class="card-input" value="@val" step="1"
+                       @onchange="(e) => Host.OnCardValueChanged(sel, e.Value?.ToString())" />
+            }
+            else if (vt == "Double")
+            {
+                <input type="number" class="card-input" value="@val" step="any"
+                       @onchange="(e) => Host.OnCardValueChanged(sel, e.Value?.ToString())" />
+            }
+            else if (vt == "Duration")
+            {
+                <input type="text" class="card-input" value="@val" placeholder="PT1H30M"
+                       title="ISO 8601 Duration (예: PT1H, PT30M, PT5S)"
+                       @onchange="(e) => Host.OnCardValueChanged(sel, e.Value?.ToString())" />
+            }
+            else
+            {
+                var selMode = Host.GetEditorMode(sel);
+                var selCaptured = sel;
+                <div class="value-editor-toggle">
+                    <button type="button"
+                            class="ve-toggle-btn @(selMode == ValueEditorMode.Text ? "active" : "")"
+                            @onclick="() => Host.SetEditorMode(selCaptured, ValueEditorMode.Text)">
+                        텍스트
+                    </button>
+                    <button type="button"
+                            class="ve-toggle-btn @(selMode == ValueEditorMode.Json ? "active" : "")"
+                            @onclick="() => Host.SetEditorMode(selCaptured, ValueEditorMode.Json)"
+                            title="JSON 편집기 (Monaco)">
+                        { } JSON
+                    </button>
+                </div>
+                @if (selMode == ValueEditorMode.Json)
+                {
+                    <div id="@Home.InlineJsonEditorId" class="inline-json-editor"></div>
+                    <div class="inline-json-actions">
+                        @if (Host._inlineEditorInvalid)
+                        {
+                            <span class="inline-json-warn">JSON 구문 오류</span>
+                        }
+                        else if (Host._inlineEditorDirty)
+                        {
+                            <span class="inline-json-dirty">변경됨 (저장되지 않음)</span>
+                        }
+                        <button class="btn btn-sm btn-outline-secondary"
+                                @onclick="() => Host.ResetInlineJsonAsync(selCaptured)"
+                                disabled="@(!Host._inlineEditorDirty)">
+                            되돌리기
+                        </button>
+                        <button class="btn btn-sm btn-primary"
+                                @onclick="() => Host.ApplyInlineJsonAsync(selCaptured)"
+                                disabled="@(!Host._inlineEditorDirty || Host._inlineEditorInvalid)">
+                            적용
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <textarea class="card-input card-input-multiline" rows="3"
+                              @onchange="(e) => Host.OnCardValueChanged(sel, e.Value?.ToString())">@val</textarea>
+                }
+            }
+        </div>
+    }
+
+    @* Container: leaf properties *@
+    @if (!isUserTags && sel.Children.Count > 0)
+    {
+        var leafKids = sel.Children.Where(c => c.Children.Count == 0
+            && !(c.NodeType == "SML" && c.Label == "UserTags")).ToList();
+        var containerKids = sel.Children.Where(c => c.Children.Count > 0
+            && !(c.NodeType == "SML" && c.Label == "UserTags")).ToList();
+
+        @if (leafKids.Count > 0)
+        {
+            <div class="finder-preview-section">
+                <div class="finder-preview-section-title">속성 (@leafKids.Count)</div>
+                @foreach (var leaf in leafKids)
+                {
+                    var lf = leaf;
+                    var lvt = leaf.Properties.GetValueOrDefault("valueType") ?? "String";
+                    var lval = leaf.Properties.GetValueOrDefault("value") ?? "";
+                    <div class="finder-preview-prop">
+                        <div class="finder-preview-prop-label">
+                            <span class="node-icon icon-@(Home.IconClass(lf))" style="width:14px;height:12px;font-size:7px">@lf.Icon</span>
+                            <span>@lf.Label</span>
+                            <span class="finder-preview-vt">@lvt</span>
+                        </div>
+                        <div class="finder-preview-prop-editor">
+                            @if (lvt == "Boolean")
+                            {
+                                var bv = lval.Equals("true", StringComparison.OrdinalIgnoreCase);
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked="@bv"
+                                           @onchange="(e) => Host.OnCardBoolChanged(lf, (bool)e.Value!)" />
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">@(bv ? "true" : "false")</span>
+                                </label>
+                            }
+                            else if (lvt is "Int" or "Double")
+                            {
+                                <input type="number" class="card-input" value="@lval"
+                                       step="@(lvt == "Int" ? "1" : "any")"
+                                       @onchange="(e) => Host.OnCardValueChanged(lf, e.Value?.ToString())" />
+                            }
+                            else
+                            {
+                                <input type="text" class="card-input" value="@lval"
+                                       @onchange="(e) => Host.OnCardValueChanged(lf, e.Value?.ToString())" />
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (containerKids.Count > 0)
+        {
+            <div class="finder-preview-section">
+                <div class="finder-preview-section-title">하위 항목 (@containerKids.Count)</div>
+                @foreach (var ck in containerKids)
+                {
+                    var ckNode = ck;
+                    <div class="finder-preview-child clickable" @onclick="() => Host.ColumnSelect(Host._explorerPath.Count, ckNode)">
+                        <span class="node-icon icon-@(Home.IconClass(ck))" style="width:16px;height:14px;font-size:8px">@ck.Icon</span>
+                        <span class="finder-preview-child-label">@ck.Label</span>
+                        <span class="finder-preview-child-badge">@ck.Children.Count</span>
+                        <span class="finder-item-chevron" style="font-size:12px">&#x203A;</span>
+                    </div>
+                }
+            </div>
+        }
+
+        @* UserTags inline in parent *@
+        @foreach (var tagChild in sel.Children.Where(c => c.NodeType == "SML" && c.Label == "UserTags"))
+        {
+            var inlineTag = tagChild;
+            <div class="finder-preview-section">
+                <div class="finder-error-header">
+                    <span class="finder-preview-section-title" style="border:none;margin:0;padding:0">사용자 태그 (@(tagChild.Children.Count)건)</span>
+                    <div class="finder-error-actions">
+                        <button class="btn btn-sm btn-outline-primary"
+                                @onclick="() => { Host.SelectNode(inlineTag); Host.OnAddUserTag(); }">+ 추가</button>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                @onclick="() => { Host.SelectNode(inlineTag); _ = Host.OnExportUserTagCsv(inlineTag); }">CSV 내보내기</button>
+                        <label class="btn btn-sm btn-outline-info btn-file" style="margin:0;cursor:pointer">
+                            CSV 추가
+                            <InputFile OnChange="@(e => Host.OnCsvAddForNode(e, inlineTag))" accept=".csv" style="display:none" />
+                        </label>
+                        <button class="btn btn-sm btn-outline-warning"
+                                @onclick="() => { Host.SelectNode(inlineTag); Host._csvReplaceTargetNode = inlineTag; Host._showCsvReplaceConfirm = true; }">CSV 교체</button>
+                    </div>
+                </div>
+                @if (tagChild.Children.Count > 0)
+                {
+                    <table class="finder-error-table">
+                        <thead>
+                            <tr>
+                                <td style="width:30%">이름</td>
+                                <td style="width:15%">로그 레벨</td>
+                                <td style="width:25%">태그 주소</td>
+                                <td style="width:15%">값 타입</td>
+                                <td style="width:15%;text-align:right"></td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var inlineUserTags = tagChild.Children
+                                    .Select(c => c.Properties.GetValueOrDefault("value") ?? "")
+                                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                                    .Select(v => { var p = v.Split('|'); return p.Length >= 4 ? (p[0].Trim(), p[1].Trim(), p[2].Trim(), p[3].Trim()) : ("", "", "", ""); })
+                                    .Where(x => x.Item1 != "")
+                                    .ToList();
+                            }
+                            @for (var ei = 0; ei < inlineUserTags.Count; ei++)
+                            {
+                                var idx = ei;
+                                var (eName, eLevel, eTag, eVt) = inlineUserTags[ei];
+                                <tr>
+                                    <td>@eName</td>
+                                    <td class="err-table-vt">@eLevel</td>
+                                    <td class="err-table-tag">@eTag</td>
+                                    <td class="err-table-vt">@eVt</td>
+                                    <td style="text-align:right">
+                                        <button class="btn-icon" title="편집"
+                                                @onclick="() => { Host.SelectNode(inlineTag); Host.OnEditUserTag(idx); }">&#9998;</button>
+                                        <button class="btn-icon btn-icon-danger" title="삭제"
+                                                @onclick="() => { Host.SelectNode(inlineTag); _ = Host.OnDeleteUserTag(idx); }">&#10005;</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="err-empty">사용자 태그가 없습니다. + 추가를 눌러 추가하세요.</div>
+                }
+            </div>
+        }
+    }
+
+    @* UserTags *@
+    @if (isUserTags)
+    {
+        var capturedTagNode = sel;
+        <div class="finder-preview-section">
+            <div class="finder-error-header">
+                <span class="finder-preview-section-title" style="border:none;margin:0;padding:0">사용자 태그 (@(sel.Children.Count)건)</span>
+                <div class="finder-error-actions">
+                    <button class="btn btn-sm btn-outline-primary"
+                            @onclick="() => { Host.SelectNode(capturedTagNode); Host.OnAddUserTag(); }">+ 추가</button>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            @onclick="() => { Host.SelectNode(capturedTagNode); _ = Host.OnExportUserTagCsv(capturedTagNode); }">CSV 내보내기</button>
+                    <label class="btn btn-sm btn-outline-info btn-file" style="margin:0;cursor:pointer">
+                        CSV 추가
+                        <InputFile OnChange="Host.OnCsvAddFileSelected" accept=".csv" style="display:none" />
+                    </label>
+                    <button class="btn btn-sm btn-outline-warning"
+                            @onclick="() => { Host.SelectNode(capturedTagNode); Host._csvReplaceTargetNode = capturedTagNode; Host._showCsvReplaceConfirm = true; }">CSV 교체</button>
+                </div>
+            </div>
+            @if (sel.Children.Count > 0)
+            {
+                <table class="finder-error-table">
+                    <thead>
+                        <tr>
+                            <td style="width:30%">이름</td>
+                            <td style="width:15%">로그 레벨</td>
+                            <td style="width:25%">태그 주소</td>
+                            <td style="width:15%">값 타입</td>
+                            <td style="width:15%;text-align:right"></td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var userTags = sel.Children
+                                .Select(c => c.Properties.GetValueOrDefault("value") ?? "")
+                                .Where(v => !string.IsNullOrWhiteSpace(v))
+                                .Select(v => { var p = v.Split('|'); return p.Length >= 4 ? (p[0].Trim(), p[1].Trim(), p[2].Trim(), p[3].Trim()) : ("", "", "", ""); })
+                                .Where(x => x.Item1 != "")
+                                .ToList();
+                        }
+                        @for (var ei = 0; ei < userTags.Count; ei++)
+                        {
+                            var idx = ei;
+                            var (eName, eLevel, eTag, eVt) = userTags[ei];
+                            <tr>
+                                <td>@eName</td>
+                                <td class="err-table-vt">@eLevel</td>
+                                <td class="err-table-tag">@eTag</td>
+                                <td class="err-table-vt">@eVt</td>
+                                <td style="text-align:right">
+                                    <button class="btn-icon" title="편집"
+                                            @onclick="() => { Host.SelectNode(capturedTagNode); Host.OnEditUserTag(idx); }">&#9998;</button>
+                                    <button class="btn-icon btn-icon-danger" title="삭제"
+                                            @onclick="() => { Host.SelectNode(capturedTagNode); _ = Host.OnDeleteUserTag(idx); }">&#10005;</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="err-empty">사용자 태그가 없습니다.</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AasTreeNode Node { get; set; } = default!;
+}

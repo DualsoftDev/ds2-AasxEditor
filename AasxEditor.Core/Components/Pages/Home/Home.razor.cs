@@ -28,50 +28,50 @@ public partial class Home : IAsyncDisposable
     // DS가 생성한 AASX가 아닌 외부 AASX 파일을 불러온 경우 true. 편집 범위·보존 안내 배너 표출에 사용.
     private bool _isExternalAasx;
 
-    private List<AasTreeNode> _treeNodes = [];
-    private AasTreeNode? _selectedNode;
+    internal List<AasTreeNode> _treeNodes = [];
+    internal AasTreeNode? _selectedNode;
     private string _centerTab = "explorer";
-    private List<AasTreeNode> _explorerPath = [];
-    private readonly Stack<List<AasTreeNode>> _navBack = new();
-    private readonly Stack<List<AasTreeNode>> _navForward = new();
-    private string _explorerViewMode = "windows"; // "mac" | "windows"
+    internal List<AasTreeNode> _explorerPath = [];
+    internal readonly Stack<List<AasTreeNode>> _navBack = new();
+    internal readonly Stack<List<AasTreeNode>> _navForward = new();
+    internal string _explorerViewMode = "windows"; // "mac" | "windows"
 
     private List<AasxFileRecord> _loadedFiles = [];
     private long _selectedFileId;
     private string _searchText = "";
-    private List<AasEntityRecord> _searchResults = [];
+    internal List<AasEntityRecord> _searchResults = [];
 
     // 드래그앤드롭
     private bool _isDragOver;
     private bool _scrollColumnsToEnd;
-    private bool _showDropChoice;
-    private string[] _pendingDropFileNames = [];
+    internal bool _showDropChoice;
+    internal string[] _pendingDropFileNames = [];
 
     // 모달 — 일괄 편집
-    private bool _showBatchEdit;
-    private string _batchNewValue = "";
-    private string _batchEditMode = "overwrite"; // overwrite, findReplace, prepend, append
-    private string _batchFindText = "";
-    private string _batchTypeFilter = "";         // 엔티티 타입 필터 ("" = 전체)
-    private string _batchValueTypeFilter = "";    // ValueType 카테고리 필터 (bit, number, string)
-    private string _batchIdFilter = "";           // IdShort 텍스트 필터
-    private HashSet<long> _batchSelectedIds = []; // 체크된 엔티티 ID (일괄 편집 대상)
-    private HashSet<long> _batchHighlightedIds = []; // 행 클릭으로 하이라이트된 ID
+    internal bool _showBatchEdit;
+    internal string _batchNewValue = "";
+    internal string _batchEditMode = "overwrite"; // overwrite, findReplace, prepend, append
+    internal string _batchFindText = "";
+    internal string _batchTypeFilter = "";         // 엔티티 타입 필터 ("" = 전체)
+    internal string _batchValueTypeFilter = "";    // ValueType 카테고리 필터 (bit, number, string)
+    internal string _batchIdFilter = "";           // IdShort 텍스트 필터
+    internal HashSet<long> _batchSelectedIds = []; // 체크된 엔티티 ID (일괄 편집 대상)
+    internal HashSet<long> _batchHighlightedIds = []; // 행 클릭으로 하이라이트된 ID
     private long _batchLastClickedId;              // Shift 클릭 기준점
-    private string _batchSortColumn = "";          // 정렬 컬럼 ("", "EntityType", "IdShort", "ValueType", "Value")
-    private bool _batchSortAsc = true;             // 정렬 방향
-    private bool _showSaveAs;
-    private string _saveAsName = "";
+    internal string _batchSortColumn = "";          // 정렬 컬럼 ("", "EntityType", "IdShort", "ValueType", "Value")
+    internal bool _batchSortAsc = true;             // 정렬 방향
+    internal bool _showSaveAs;
+    internal string _saveAsName = "";
 
     private static bool _sessionStarted;
     private bool HasContent => _contentLoaded;
     private List<AasTreeNode> ExplorerNodes => _explorerPath.Count == 0 ? _treeNodes : _explorerPath[^1].Children;
 
     // ===== Helpers =====
-    private static string IconClass(AasTreeNode node)
+    internal static string IconClass(AasTreeNode node)
         => node.Icon.ToLower().Replace("{}", "smc").Replace("[]", "sml");
 
-    private void SelectNode(AasTreeNode node)
+    internal void SelectNode(AasTreeNode node)
     {
         _selectedNode = node;
     }
@@ -83,7 +83,7 @@ public partial class Home : IAsyncDisposable
         StateHasChanged();
     }
 
-    private static string TruncateValue(string val, int max = 60)
+    internal static string TruncateValue(string val, int max = 60)
         => val.Length > max ? val[..max] + "..." : val;
 
     private string GetFileName(long fileId)

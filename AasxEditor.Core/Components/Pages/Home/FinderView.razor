@@ -1,0 +1,188 @@
+@inherits HomeSection
+
+<div class="finder">
+    @if (Host._treeNodes.Count == 0)
+    {
+        <div class="panel-empty">AASX 파일을 열어주세요</div>
+    }
+    else
+    {
+        @* ── Finder Toolbar (Windows Explorer 스타일) ── *@
+        <div class="finder-toolbar">
+            <div class="finder-nav">
+                <button class="finder-nav-btn" disabled="@(Host._navBack.Count == 0)" @onclick="Host.ExplorerGoBack" title="뒤로">&#x2190;</button>
+                <button class="finder-nav-btn" disabled="@(Host._navForward.Count == 0)" @onclick="Host.ExplorerGoForward" title="앞으로">&#x2192;</button>
+                <button class="finder-nav-btn" disabled="@(Host._explorerPath.Count == 0)" @onclick="Host.ExplorerGoUp" title="상위 폴더">&#x2191;</button>
+            </div>
+            @{
+                const int AddrMaxSegments = 4;
+                var addrTruncated = Host._explorerPath.Count > AddrMaxSegments;
+                var addrStartIdx = addrTruncated ? Host._explorerPath.Count - (AddrMaxSegments - 1) : 0;
+                var addrHiddenTitle = addrTruncated
+                    ? string.Join(" › ", Host._explorerPath.Take(addrStartIdx).Select(n => n.Label))
+                    : string.Empty;
+            }
+            <div class="finder-addressbar">
+                <span class="finder-addr-icon">&#x1F4C1;</span>
+                <span class="finder-addr-seg @(Host._explorerPath.Count == 0 ? "active" : "")"
+                      @onclick="Host.ExplorerGoRoot">Root</span>
+                @if (addrTruncated)
+                {
+                    <span class="finder-addr-sep">&#x203A;</span>
+                    <span class="finder-addr-seg finder-addr-ellipsis"
+                          title="@addrHiddenTitle">…</span>
+                }
+                @for (var pi = addrStartIdx; pi < Host._explorerPath.Count; pi++)
+                {
+                    var pidx = pi;
+                    <span class="finder-addr-sep">&#x203A;</span>
+                    <span class="finder-addr-seg @(pi == Host._explorerPath.Count - 1 ? "active" : "") @(pi == Host._explorerPath.Count - 1 ? "finder-addr-seg-last" : "")"
+                          @onclick="() => Host.ExplorerGoTo(pidx)"
+                          title="@Host._explorerPath[pidx].Label">
+                        @Host._explorerPath[pidx].Label
+                    </span>
+                }
+            </div>
+            <div class="finder-view-toggle" role="group" title="보기 모드">
+                <button class="finder-view-btn @(Host._explorerViewMode == "mac" ? "active" : "")"
+                        @onclick='() => Host.SetExplorerViewMode("mac")' title="컬럼 (macOS 스타일)">
+                    <span class="view-icon-mac"><span></span><span></span><span></span></span>
+                    <span class="finder-view-label">컬럼</span>
+                </button>
+                <button class="finder-view-btn @(Host._explorerViewMode == "windows" ? "active" : "")"
+                        @onclick='() => Host.SetExplorerViewMode("windows")' title="큰 아이콘 (Windows 스타일)">
+                    <span class="view-icon-win"><span></span><span></span><span></span><span></span></span>
+                    <span class="finder-view-label">아이콘</span>
+                </button>
+            </div>
+        </div>
+
+        @* ── Missing SequenceLogging banner ── *@
+        @if (Host.ShouldShowCreateLoggingBanner)
+        {
+            <div class="create-logging-banner">
+                <div class="create-logging-banner-icon">!</div>
+                <div class="create-logging-banner-text">
+                    <div class="create-logging-banner-title">SequenceLogging 서브모델이 없습니다</div>
+                    <div class="create-logging-banner-desc">
+                        에러 정의를 추가하려면 Logging 서브모델 구조가 필요합니다. Promaker에서 "기본 엔티티 생성" 옵션을 켜고 다시 저장해 주세요.
+                    </div>
+                </div>
+                <div class="create-logging-banner-actions">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="Host.OnDismissCreateLoggingBanner" title="숨기기">&#10005;</button>
+                </div>
+            </div>
+        }
+
+        @* ── Column View + Preview ── *@
+        <div class="finder-body">
+            @if (Host._explorerViewMode == "mac")
+            {
+                <div class="finder-columns" id="finder-columns">
+                    @* Column 0: Root *@
+                    <div class="finder-column">
+                        @foreach (var node in Host._treeNodes)
+                        {
+                            var n = node;
+                            <div class="finder-item @(Host.IsColumnItemSelected(0, n) ? "selected" : "")"
+                                 @onclick="() => Host.ColumnSelect(0, n)">
+                                <span class="node-icon icon-@(Home.IconClass(n))" style="width:18px;height:16px;font-size:9px">@n.Icon</span>
+                                <span class="finder-item-label">@n.Label</span>
+                                @if (n.Children.Count > 0)
+                                {
+                                    <span class="finder-item-chevron">&#x203A;</span>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    @* Columns 1..N: 컨테이너 자식만 표시 (리프는 프리뷰에서 편집) *@
+                    @for (var ci = 0; ci < Host._explorerPath.Count; ci++)
+                    {
+                        var colIdx = ci + 1;
+                        var parentNode = Host._explorerPath[ci];
+                        <div class="finder-column">
+                            @foreach (var child in parentNode.Children.Where(ch => ch.Children.Count > 0))
+                            {
+                                var c = child;
+                                var idx = colIdx;
+                                <div class="finder-item @(Host.IsColumnItemSelected(idx, c) ? "selected" : "")"
+                                     @onclick="() => Host.ColumnSelect(idx, c)">
+                                    <span class="node-icon icon-@(Home.IconClass(c))" style="width:18px;height:16px;font-size:9px">@c.Icon</span>
+                                    <span class="finder-item-label">@c.Label</span>
+                                    <span class="finder-item-chevron">&#x203A;</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                @* Windows-style large icons grid *@
+                <div class="finder-grid-wrap">
+                    @{
+                        var currentNodes = Host._explorerPath.Count == 0 ? Host._treeNodes : Host._explorerPath[^1].Children;
+                    }
+                    @if (currentNodes.Count == 0)
+                    {
+                        <div class="finder-grid-empty">이 폴더는 비어 있습니다</div>
+                    }
+                    else
+                    {
+                        <div class="finder-grid">
+                            @foreach (var item in currentNodes)
+                            {
+                                var it = item;
+                                var isFolder = it.Children.Count > 0;
+                                <div class="finder-tile @(Host._selectedNode == it ? "selected" : "") @(isFolder ? "is-folder" : "is-leaf")"
+                                     @onclick="() => Host.WindowsTileClick(it)"
+                                     @ondblclick="() => Host.WindowsTileDblClick(it)"
+                                     title="@it.Label">
+                                    <div class="finder-tile-icon-wrap">
+                                        <span class="node-icon icon-@(Home.IconClass(it)) finder-tile-icon">@it.Icon</span>
+                                        @if (isFolder)
+                                        {
+                                            <span class="finder-tile-badge">@it.Children.Count</span>
+                                        }
+                                    </div>
+                                    <div class="finder-tile-label">@it.Label</div>
+                                    <div class="finder-tile-type">@it.NodeType</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @* ── Preview Pane ── *@
+            @if (Host._selectedNode is not null)
+            {
+                <PreviewPane Host="Host" Node="Host._selectedNode" />
+            }
+        </div>
+
+        @* ── Status Bar (Windows Explorer 하단 상태) ── *@
+        var statusNodes = Host._explorerPath.Count == 0 ? Host._treeNodes : Host._explorerPath[^1].Children;
+        var statusFolderCount = statusNodes.Count(n => n.Children.Count > 0);
+        var statusLeafCount = statusNodes.Count - statusFolderCount;
+        <div class="finder-statusbar">
+            <span class="finder-status-item">@statusNodes.Count 개 항목</span>
+            @if (statusFolderCount > 0)
+            {
+                <span class="finder-status-sep">·</span>
+                <span class="finder-status-item">폴더 @statusFolderCount</span>
+            }
+            @if (statusLeafCount > 0)
+            {
+                <span class="finder-status-sep">·</span>
+                <span class="finder-status-item">항목 @statusLeafCount</span>
+            }
+            @if (Host._selectedNode is not null)
+            {
+                <span class="finder-status-sep">·</span>
+                <span class="finder-status-item">선택: @Host._selectedNode.Label</span>
+            }
+        </div>
+    }
+</div>

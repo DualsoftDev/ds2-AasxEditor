@@ -10,10 +10,10 @@ public partial class Home
     private readonly Dictionary<string, ValueEditorMode> _editorModeCache = new(StringComparer.Ordinal);
 
     // 현재 인라인 Monaco 편집기 호스트 ID. JSON 모드인 노드가 선택됐을 때만 마운트.
-    private const string InlineJsonEditorId = "inline-json-editor";
+    internal const string InlineJsonEditorId = "inline-json-editor";
     private string? _mountedInlineJsonPath;
-    private bool _inlineEditorDirty;
-    private bool _inlineEditorInvalid;
+    internal bool _inlineEditorDirty;
+    internal bool _inlineEditorInvalid;
 
     private void ResetEditorModeCache()
     {
@@ -56,7 +56,7 @@ public partial class Home
         return JsonValueDetector.LooksLikeJson(val) ? ValueEditorMode.Json : ValueEditorMode.Text;
     }
 
-    private ValueEditorMode GetEditorMode(AasTreeNode node)
+    internal ValueEditorMode GetEditorMode(AasTreeNode node)
     {
         if (_editorModeCache.TryGetValue(node.JsonPath, out var mode)) return mode;
         // 새로 추가된 노드는 첫 조회 시 1회 감지 후 캐시
@@ -65,7 +65,7 @@ public partial class Home
         return detected;
     }
 
-    private async Task SetEditorMode(AasTreeNode node, ValueEditorMode mode)
+    internal async Task SetEditorMode(AasTreeNode node, ValueEditorMode mode)
     {
         var prev = GetEditorMode(node);
         if (prev == mode) return;
@@ -133,7 +133,7 @@ public partial class Home
         return Task.CompletedTask;
     }
 
-    private async Task ApplyInlineJsonAsync(AasTreeNode node)
+    internal async Task ApplyInlineJsonAsync(AasTreeNode node)
     {
         if (_mountedInlineJsonPath != node.JsonPath) return;
         string raw;
@@ -161,7 +161,7 @@ public partial class Home
         _inlineEditorInvalid = false;
     }
 
-    private async Task ResetInlineJsonAsync(AasTreeNode node)
+    internal async Task ResetInlineJsonAsync(AasTreeNode node)
     {
         var current = node.Properties.GetValueOrDefault("value") ?? "";
         var pretty = JsonValueDetector.TryFormat(current);

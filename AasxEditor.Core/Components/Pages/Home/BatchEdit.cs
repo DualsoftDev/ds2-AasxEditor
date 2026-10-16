@@ -9,7 +9,7 @@ namespace AasxEditor.Components.Pages;
 public partial class Home
 {
     /// <summary>편집 모드</summary>
-    private static readonly (string Mode, string Label)[] BatchEditModes =
+    internal static readonly (string Mode, string Label)[] BatchEditModes =
     [
         ("overwrite", "값 덮어쓰기"),
         ("findReplace", "찾아 바꾸기"),
@@ -61,7 +61,7 @@ public partial class Home
         _showBatchEdit = true;
     }
 
-    private void CloseBatchEdit() => _showBatchEdit = false;
+    internal void CloseBatchEdit() => _showBatchEdit = false;
 
     /// <summary>현재 필터에 맞는 편집 가능한 항목만 선택하고 나머지는 해제</summary>
     private void ReselectForCurrentFilter()
@@ -73,7 +73,7 @@ public partial class Home
     }
 
     /// <summary>ValueType 카테고리 필터 변경 시 — 선택 초기화 + 새 값 초기화</summary>
-    private void OnBatchValueTypeFilterChanged(string newFilter)
+    internal void OnBatchValueTypeFilterChanged(string newFilter)
     {
         _batchValueTypeFilter = newFilter;
         _batchHighlightedIds.Clear();
@@ -85,11 +85,11 @@ public partial class Home
     }
 
     /// <summary>검색 결과에 등장하는 고유 엔티티 타입 목록</summary>
-    private List<string> GetBatchEntityTypes()
+    internal List<string> GetBatchEntityTypes()
         => _searchResults.Select(r => r.EntityType).Distinct().OrderBy(t => t).ToList();
 
     /// <summary>카테고리별 건수 계산</summary>
-    private List<(string Category, string Label, int Count)> GetBatchValueTypeCategories()
+    internal List<(string Category, string Label, int Count)> GetBatchValueTypeCategories()
     {
         var result = new List<(string, string, int)>();
         foreach (var (cat, label, types) in ValueTypeCategories)
@@ -101,11 +101,11 @@ public partial class Home
     }
 
     /// <summary>편집 가능한 엔티티 타입인지</summary>
-    private static bool IsEditableType(string entityType)
+    internal static bool IsEditableType(string entityType)
         => ValueEditableTypes.Contains(entityType);
 
     /// <summary>헤더 클릭 시 정렬 토글</summary>
-    private void OnBatchSortToggle(string column)
+    internal void OnBatchSortToggle(string column)
     {
         if (_batchSortColumn == column)
             _batchSortAsc = !_batchSortAsc;
@@ -117,7 +117,7 @@ public partial class Home
     }
 
     /// <summary>필터 + 정렬 조건에 맞는 검색 결과 (보이는 목록)</summary>
-    private List<AasEntityRecord> GetFilteredBatchRecords()
+    internal List<AasEntityRecord> GetFilteredBatchRecords()
     {
         IEnumerable<AasEntityRecord> results = _searchResults;
 
@@ -149,26 +149,26 @@ public partial class Home
     }
 
     /// <summary>선택되고 편집 가능한 레코드 (실제 적용 대상)</summary>
-    private List<AasEntityRecord> GetBatchApplyTargets()
+    internal List<AasEntityRecord> GetBatchApplyTargets()
         => _searchResults
             .Where(r => _batchSelectedIds.Contains(r.Id) && IsEditableType(r.EntityType))
             .ToList();
 
     // ===== 체크박스 조작 =====
 
-    private void OnBatchToggleItem(long id, bool isChecked)
+    internal void OnBatchToggleItem(long id, bool isChecked)
     {
         if (isChecked) _batchSelectedIds.Add(id);
         else _batchSelectedIds.Remove(id);
     }
 
-    private void OnBatchSelectAllVisible()
+    internal void OnBatchSelectAllVisible()
     {
         foreach (var r in GetFilteredBatchRecords().Where(r => IsEditableType(r.EntityType)))
             _batchSelectedIds.Add(r.Id);
     }
 
-    private void OnBatchDeselectAllVisible()
+    internal void OnBatchDeselectAllVisible()
     {
         foreach (var r in GetFilteredBatchRecords())
             _batchSelectedIds.Remove(r.Id);
@@ -176,7 +176,7 @@ public partial class Home
 
     // ===== 행 클릭 선택 (Ctrl/Shift) =====
 
-    private void OnBatchRowClick(long id, MouseEventArgs e)
+    internal void OnBatchRowClick(long id, MouseEventArgs e)
     {
         var filtered = GetFilteredBatchRecords();
         var rec = filtered.FirstOrDefault(r => r.Id == id);
@@ -211,14 +211,14 @@ public partial class Home
         }
     }
 
-    private void OnBatchCheckHighlighted()
+    internal void OnBatchCheckHighlighted()
     {
         foreach (var id in _batchHighlightedIds)
             _batchSelectedIds.Add(id);
         _batchHighlightedIds.Clear();
     }
 
-    private void OnBatchUncheckHighlighted()
+    internal void OnBatchUncheckHighlighted()
     {
         foreach (var id in _batchHighlightedIds)
             _batchSelectedIds.Remove(id);
@@ -240,9 +240,9 @@ public partial class Home
         };
     }
 
-    private string PreviewNewValue(AasEntityRecord r) => ComputeNewValue(r.Value);
+    internal string PreviewNewValue(AasEntityRecord r) => ComputeNewValue(r.Value);
 
-    private bool CanApply()
+    internal bool CanApply()
     {
         if (_batchEditMode == "findReplace")
             return !string.IsNullOrEmpty(_batchFindText);
@@ -251,7 +251,7 @@ public partial class Home
 
     // ===== 적용 =====
 
-    private async Task OnBatchApply()
+    internal async Task OnBatchApply()
     {
         if (!CanApply()) { SetStatus("값을 입력하세요", "error"); return; }
         if (_currentEnv is null) { SetStatus("로드된 파일이 없습니다", "error"); return; }

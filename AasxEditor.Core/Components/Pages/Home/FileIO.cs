@@ -135,7 +135,7 @@ public partial class Home
         _showSaveAs = true;
     }
 
-    private async Task OnSaveAsConfirm()
+    internal async Task OnSaveAsConfirm()
     {
         if (string.IsNullOrWhiteSpace(_saveAsName)) return;
         var name = _saveAsName.Trim();

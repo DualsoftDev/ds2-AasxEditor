@@ -25,8 +25,8 @@ public partial class Home
         StateHasChanged();
     }
 
-    private async Task OnDropChoiceOpen() => await TriggerDropInput("#input-file-open");
-    private async Task OnDropChoiceAdd() => await TriggerDropInput("#input-file-add");
+    internal async Task OnDropChoiceOpen() => await TriggerDropInput("#input-file-open");
+    internal async Task OnDropChoiceAdd() => await TriggerDropInput("#input-file-add");
 
     private async Task TriggerDropInput(string selector)
     {

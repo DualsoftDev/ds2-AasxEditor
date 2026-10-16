@@ -13,12 +13,12 @@ public partial class Home
     private bool HasSequenceModelSubmodel
         => _currentEnv?.Submodels?.Any(sm => sm.IdShort == ModelSubmodelIdShort) == true;
 
-    private bool ShouldShowCreateLoggingBanner
+    internal bool ShouldShowCreateLoggingBanner
         => _contentLoaded
            && _currentEnv is not null
            && HasSequenceModelSubmodel
            && !HasSequenceLoggingSubmodel
            && !_createLoggingBannerDismissed;
 
-    private void OnDismissCreateLoggingBanner() => _createLoggingBannerDismissed = true;
+    internal void OnDismissCreateLoggingBanner() => _createLoggingBannerDismissed = true;
 }

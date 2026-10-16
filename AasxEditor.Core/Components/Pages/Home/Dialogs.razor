@@ -1,0 +1,335 @@
+@inherits HomeSection
+
+@if (Host._showDropChoice)
+{
+    <div class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-title">파일 열기 방식 선택</div>
+            <div class="modal-body">
+                <p class="dialog-message">@(string.Join(", ", Host._pendingDropFileNames)) 파일을 어떻게 여시겠습니까?</p>
+            </div>
+            <div class="modal-actions" style="justify-content:center;gap:16px">
+                <button class="btn btn-primary" @onclick="Host.OnDropChoiceOpen">새로 열기</button>
+                <button class="btn btn-outline-primary" @onclick="Host.OnDropChoiceAdd">추가</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => Host._showDropChoice = false">취소</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Host._showSaveAs)
+{
+    <div class="modal-overlay">
+        <div class="modal-dialog" style="width:400px">
+            <div class="modal-title">다른 이름으로 저장</div>
+            <div class="modal-body">
+                <label class="modal-input-label">파일 이름</label>
+                <input class="modal-input" type="text" @bind="Host._saveAsName" @bind:event="oninput"
+                       placeholder="파일이름.aasx" />
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-sm" @onclick="Host.OnSaveAsConfirm">저장</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => Host._showSaveAs = false">취소</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Host._showBatchEdit)
+{
+    var filteredRecords = Host.GetFilteredBatchRecords();
+    var applyTargets = Host.GetBatchApplyTargets();
+    var entityTypes = Host.GetBatchEntityTypes();
+    var vtCategories = Host.GetBatchValueTypeCategories();
+    var highlightCount = Host._batchHighlightedIds.Count;
+
+    <div class="modal-overlay">
+        <div class="modal-dialog" style="width:720px;max-height:85vh;display:flex;flex-direction:column">
+            <div class="modal-title">일괄 편집 — 검색 결과 @(Host._searchResults.Count)건 중 @(applyTargets.Count)건 선택됨</div>
+            <div class="modal-body" style="display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0">
+
+                @* Row 1: 편집 방식 (Bit은 덮어쓰기만 가능) *@
+                @if (Host._batchValueTypeFilter != "bit")
+                {
+                    <div style="margin-bottom:8px;flex-shrink:0">
+                        <label class="modal-input-label">편집 방식</label>
+                        <select class="modal-input" @bind="Host._batchEditMode">
+                            @foreach (var (mode, label) in Home.BatchEditModes)
+                            {
+                                <option value="@mode">@label</option>
+                            }
+                        </select>
+                    </div>
+                }
+
+                @* Row 2: 필터 *@
+                <div style="display:flex;gap:6px;margin-bottom:6px;flex-shrink:0;align-items:center">
+                    <select class="modal-input" style="font-size:12px;padding:4px 6px;flex:0 0 120px"
+                            @bind="Host._batchTypeFilter">
+                        <option value="">전체 타입</option>
+                        @foreach (var t in entityTypes)
+                        {
+                            var cnt = Host._searchResults.Count(r => r.EntityType == t);
+                            <option value="@t">@t (@cnt)</option>
+                        }
+                    </select>
+                    @if (vtCategories.Count > 0)
+                    {
+                        <select class="modal-input" style="font-size:12px;padding:4px 6px;flex:0 0 120px"
+                                value="@Host._batchValueTypeFilter"
+                                @onchange="(e) => Host.OnBatchValueTypeFilterChanged(e.Value?.ToString() ?? string.Empty)">
+                            <option value="">전체 값타입</option>
+                            @foreach (var (cat, catLabel, cnt) in vtCategories)
+                            {
+                                <option value="@cat">@catLabel (@cnt)</option>
+                            }
+                        </select>
+                    }
+                    <input class="modal-input" type="text" style="font-size:12px;padding:4px 6px;flex:1"
+                           placeholder="IdShort 필터..."
+                           @bind="Host._batchIdFilter" @bind:event="oninput" />
+                    <button class="btn btn-outline-info" style="font-size:11px;padding:3px 8px;white-space:nowrap" @onclick="Host.OnBatchSelectAllVisible">
+                        전체선택
+                    </button>
+                    <button class="btn btn-outline-secondary" style="font-size:11px;padding:3px 8px;white-space:nowrap" @onclick="Host.OnBatchDeselectAllVisible">
+                        전체해제
+                    </button>
+                </div>
+
+                @* Row 2.5: 하이라이트 액션 바 (행 클릭 선택 시 표시) *@
+                @if (highlightCount > 0)
+                {
+                    <div class="batch-highlight-bar">
+                        <span class="batch-highlight-count">@highlightCount 건 선택됨</span>
+                        <button class="btn btn-outline-info" style="font-size:11px;padding:2px 8px" @onclick="Host.OnBatchCheckHighlighted">
+                            체크
+                        </button>
+                        <button class="btn btn-outline-secondary" style="font-size:11px;padding:2px 8px" @onclick="Host.OnBatchUncheckHighlighted">
+                            체크해제
+                        </button>
+                        <button class="btn btn-outline-secondary" style="font-size:11px;padding:2px 6px" @onclick="() => Host._batchHighlightedIds.Clear()">
+                            취소
+                        </button>
+                        <span class="batch-highlight-hint">Ctrl+클릭: 추가, Shift+클릭: 범위</span>
+                    </div>
+                }
+
+                @* Row 3: 스크롤 가능한 항목 목록 *@
+                <div class="batch-table-wrap">
+                    <table class="batch-table">
+                        <thead>
+                            <tr>
+                                <td style="width:28px;padding:4px;text-align:center"></td>
+                                <td style="width:65px;padding:4px;cursor:pointer" @onclick='() => Host.OnBatchSortToggle("EntityType")'>
+                                    타입@(Host._batchSortColumn == "EntityType" ? (Host._batchSortAsc ? " \u25B2" : " \u25BC") : "")
+                                </td>
+                                <td style="padding:4px;cursor:pointer" @onclick='() => Host.OnBatchSortToggle("IdShort")'>
+                                    IdShort@(Host._batchSortColumn == "IdShort" ? (Host._batchSortAsc ? " \u25B2" : " \u25BC") : "")
+                                </td>
+                                <td style="width:70px;padding:4px;cursor:pointer" @onclick='() => Host.OnBatchSortToggle("ValueType")'>
+                                    값타입@(Host._batchSortColumn == "ValueType" ? (Host._batchSortAsc ? " \u25B2" : " \u25BC") : "")
+                                </td>
+                                <td style="padding:4px;min-width:80px;cursor:pointer" @onclick='() => Host.OnBatchSortToggle("Value")'>
+                                    현재 값@(Host._batchSortColumn == "Value" ? (Host._batchSortAsc ? " \u25B2" : " \u25BC") : "")
+                                </td>
+                                @if (Host.CanApply() && Host._batchEditMode != "overwrite")
+                                {
+                                    <td style="padding:4px;min-width:80px">변경 후</td>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in filteredRecords)
+                            {
+                                var rec = r;
+                                var isEditable = Home.IsEditableType(rec.EntityType);
+                                var isChecked = Host._batchSelectedIds.Contains(rec.Id);
+                                var isHighlighted = Host._batchHighlightedIds.Contains(rec.Id);
+                                var curVal = rec.Value ?? "";
+                                var showPreview = Host.CanApply() && Host._batchEditMode != "overwrite" && isChecked;
+
+                                var opacity = !isEditable ? "0.35" : isChecked ? "1" : "0.55";
+
+                                <tr class="@(isHighlighted ? "highlighted" : "")"
+                                    style="opacity:@opacity;cursor:@(isEditable ? "pointer" : "default")"
+                                    @onclick="(e) => Host.OnBatchRowClick(rec.Id, e)"
+                                    @onclick:stopPropagation="true">
+                                    <td style="padding:3px 4px;text-align:center" @onclick:stopPropagation="true">
+                                        <input type="checkbox" checked="@isChecked" disabled="@(!isEditable)"
+                                               @onchange="(e) => Host.OnBatchToggleItem(rec.Id, (bool)e.Value!)" />
+                                    </td>
+                                    <td style="padding:3px 4px">
+                                        <span class="modal-chip-type" style="font-size:10px">@rec.EntityType</span>
+                                    </td>
+                                    <td class="batch-id-cell">@rec.IdShort</td>
+                                    <td class="batch-vt-cell">@(rec.ValueType ?? "")</td>
+                                    <td class="batch-value-cell">
+                                        @if (!string.IsNullOrEmpty(curVal))
+                                        {
+                                            <span style="@(showPreview ? "text-decoration:line-through;opacity:0.5" : "")">@Home.TruncateValue(curVal, 18)</span>
+                                        }
+                                    </td>
+                                    @if (Host.CanApply() && Host._batchEditMode != "overwrite")
+                                    {
+                                        <td class="batch-preview-cell">
+                                            @if (showPreview)
+                                            {
+                                                @Home.TruncateValue(Host.PreviewNewValue(rec), 18)
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @* Row 4: 입력 필드 — 값타입 카테고리별 UI *@
+                <div style="flex-shrink:0">
+                    @if (Host._batchValueTypeFilter == "bit")
+                    {
+                        @* Bit: true/false 토글 버튼 *@
+                        <label class="modal-input-label">새 값</label>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn @(Host._batchNewValue == "true" ? "btn-info" : "btn-outline-secondary")"
+                                    style="flex:1;padding:6px" @onclick='() => Host._batchNewValue = "true"'>
+                                true
+                            </button>
+                            <button class="btn @(Host._batchNewValue == "false" ? "btn-info" : "btn-outline-secondary")"
+                                    style="flex:1;padding:6px" @onclick='() => Host._batchNewValue = "false"'>
+                                false
+                            </button>
+                        </div>
+                    }
+                    else if (Host._batchValueTypeFilter == "number" && Host._batchEditMode == "overwrite")
+                    {
+                        @* Number + 덮어쓰기: 숫자 입력 *@
+                        <label class="modal-input-label">새 값</label>
+                        <input class="modal-input" type="number" step="any" placeholder="숫자 입력..."
+                               @bind="Host._batchNewValue" @bind:event="oninput" />
+                    }
+                    else if (Host._batchEditMode == "findReplace")
+                    {
+                        <div style="display:flex;gap:8px">
+                            <div style="flex:1">
+                                <label class="modal-input-label">찾을 텍스트</label>
+                                <input class="modal-input" type="text" placeholder="기존 값에서 찾을 텍스트..."
+                                       @bind="Host._batchFindText" @bind:event="oninput" />
+                            </div>
+                            <div style="flex:1">
+                                <label class="modal-input-label">바꿀 텍스트</label>
+                                <input class="modal-input" type="text" placeholder="바꿀 텍스트..."
+                                       @bind="Host._batchNewValue" @bind:event="oninput" />
+                            </div>
+                        </div>
+                    }
+                    else if (Host._batchEditMode == "prepend")
+                    {
+                        <label class="modal-input-label">앞에 추가할 텍스트</label>
+                        <input class="modal-input" type="text" placeholder="기존 값 앞에 붙일 텍스트..."
+                               @bind="Host._batchNewValue" @bind:event="oninput" />
+                    }
+                    else if (Host._batchEditMode == "append")
+                    {
+                        <label class="modal-input-label">뒤에 추가할 텍스트</label>
+                        <input class="modal-input" type="text" placeholder="기존 값 뒤에 붙일 텍스트..."
+                               @bind="Host._batchNewValue" @bind:event="oninput" />
+                    }
+                    else
+                    {
+                        <label class="modal-input-label">새 값</label>
+                        <input class="modal-input" type="text" placeholder="변경할 값 입력..."
+                               @bind="Host._batchNewValue" @bind:event="oninput" />
+                    }
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-sm" @onclick="Host.OnBatchApply"
+                        disabled="@(applyTargets.Count == 0 || !Host.CanApply())">
+                    적용 (@(applyTargets.Count)건)
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="Host.CloseBatchEdit">취소</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Host._showUserTagEditor)
+{
+    <div class="modal-overlay">
+        <div class="modal-dialog" style="width:420px">
+            <div class="modal-title">@(Host._editingUserTagIndex >= 0 ? "사용자 태그 수정" : "사용자 태그 추가")</div>
+            <div class="modal-body">
+                <div class="form-field">
+                    <label class="form-label">태그 이름</label>
+                    <input class="form-input" type="text" @bind="Host._userTagName" placeholder="Motor_Overload" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">로그 레벨</label>
+                    <select class="form-input" @bind="Host._userTagLogLevel">
+                        @foreach (var lv in Home.UserTagLogLevels)
+                        {
+                            <option value="@lv">@lv</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">태그 주소</label>
+                    <input class="form-input" type="text" @bind="Host._userTagAddress" placeholder="M901" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">값 타입</label>
+                    <select class="form-input" @bind="Host._userTagValueType">
+                        @foreach (var vt in Home.PlcValueTypes)
+                        {
+                            <option value="@vt">@vt</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">매칭 조건 (비워두면 자동: Bit=RisingEdge / 그 외=Changed)</label>
+                    <select class="form-input" @bind="Host._userTagMatchOp">
+                        <option value="">(기본값)</option>
+                        <option value="RisingEdge">RisingEdge (0 → 1)</option>
+                        <option value="FallingEdge">FallingEdge (1 → 0)</option>
+                        <option value="Changed">Changed (값 변경 시)</option>
+                        <option value="Eq">Eq (= 기준값)</option>
+                        <option value="Neq">Neq (≠ 기준값)</option>
+                        <option value="Gt">Gt (&gt; 기준값)</option>
+                        <option value="Gte">Gte (≥ 기준값)</option>
+                        <option value="Lt">Lt (&lt; 기준값)</option>
+                        <option value="Lte">Lte (≤ 기준값)</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">기준값 (Eq/Neq/Gt/Gte/Lt/Lte 에서만 사용)</label>
+                    <input class="form-input" type="text" @bind="Host._userTagMatchValue" placeholder="예: 1, 85.0, ERROR" />
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-sm" @onclick="Host.OnSaveUserTag">저장</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => Host._showUserTagEditor = false">취소</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Host._showCsvReplaceConfirm)
+{
+    <div class="modal-overlay">
+        <div class="modal-dialog" style="width:400px">
+            <div class="modal-title">CSV 교체 확인</div>
+            <div class="modal-body">
+                <p class="dialog-danger">기존에 추가한 사용자 태그를 모두 삭제하고 CSV 파일의 내용으로 덮어씁니다.</p>
+                <p class="dialog-subtext">현재 @(Host._csvReplaceTargetNode?.Children.Count ?? 0)건의 태그가 삭제됩니다. 계속하시겠습니까?</p>
+            </div>
+            <div class="modal-actions">
+                <label class="btn btn-warning btn-sm btn-file" style="margin:0;cursor:pointer">
+                    CSV 선택 후 교체
+                    <InputFile OnChange="Host.OnCsvReplaceFileSelected" accept=".csv" style="display:none" />
+                </label>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => Host._showCsvReplaceConfirm = false">취소</button>
+            </div>
+        </div>
+    </div>
+}
